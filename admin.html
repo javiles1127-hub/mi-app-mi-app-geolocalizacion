@@ -50,12 +50,13 @@
                             <th>Nombre</th>
                             <th>WhatsApp</th>
                             <th>Producto</th>
-                            <th>Ubicación (IP)</th>
+                            <th>Dirección IP</th>
+                            <th>Ubicación</th>
                             <th>ISP</th>
                         </tr>
                     </thead>
                     <tbody id="contacts-body">
-                        <tr><td colspan="6" style="text-align: center;">Cargando contactos...</td></tr>
+                        <tr><td colspan="7" style="text-align: center;">Cargando contactos...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -194,7 +195,7 @@
                 tbody.innerHTML = '';
                 
                 if(!data || data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No hay consultas de clientes registradas aún.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No hay consultas de clientes registradas aún.</td></tr>';
                     return;
                 }
 
@@ -211,6 +212,7 @@
                                 </a>
                             </td>
                             <td>${item.productName || ''}</td>
+                            <td><span style="font-family: monospace; color: #d35400;">${item.ip || 'No capturada'}</span></td>
                             <td>${item.city ? item.city + ', ' + item.country : 'No disponible'}</td>
                             <td><span style="font-size: 0.8em; color: #666;">${item.isp || '-'}</span></td>
                         </tr>
