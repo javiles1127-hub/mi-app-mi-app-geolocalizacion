@@ -12,14 +12,51 @@
         <h1>📍 Registro de Ubicaciones Capturadas</h1>
         <p>Aquí aparecerán las coordenadas de las personas que dieron "Me gusta" al catálogo.</p>
         
-        <button onclick="loadData()" class="btn-primary" style="margin-top: 1rem; border-radius: 8px;">
-            Actualizar Datos
-        </button>
+        <div style="background: white; padding: 1.5rem; border-radius: 8px; margin-top: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h3 style="margin-top: 0;">Subir Archivos al Servidor</h3>
+            <input type="file" id="fileInput" style="margin-bottom: 15px; display: block;">
+            <button onclick="uploadFile()" class="btn-primary" style="border-radius: 8px; background-color: #4CAF50;">
+                Subir Archivo
+            </button>
+            <p id="uploadStatus" style="margin-top: 10px; font-weight: bold; font-size: 0.9em;"></p>
+        </div>
+
+        <div style="background: white; padding: 1.5rem; border-radius: 8px; margin-top: 2rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h3 style="margin-top: 0;">Gestión de Catálogo (Ver, Editar, Eliminar)</h3>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Imagen</th>
+                            <th>Nombre del Producto</th>
+                            <th style="text-align: center;">❤️ Likes</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="products-body">
+                        <tr><td colspan="3" style="text-align: center;">Cargando catálogo...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div>
+            <button onclick="loadData()" class="btn-primary" style="margin-top: 1rem; border-radius: 8px;">
+                Actualizar Datos
+            </button>
+            <button onclick="deleteSelectedLocations()" style="margin-top: 1rem; margin-left: 10px; border-radius: 8px; background-color: #f39c12; color: white; padding: 10px 15px; border: none; font-weight: 600; cursor: pointer;">
+                Eliminar Seleccionados
+            </button>
+            <button onclick="clearData()" style="margin-top: 1rem; margin-left: 10px; border-radius: 8px; background-color: #e74c3c; color: white; padding: 10px 15px; border: none; font-weight: 600; cursor: pointer;">
+                Borrar Todos los Registros
+            </button>
+        </div>
 
         <div style="overflow-x: auto;">
             <table>
                 <thead>
                     <tr>
+                        <th style="width: 40px; text-align: center;"><input type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>
                         <th>Fecha y Hora</th>
                         <th>IP</th>
                         <th>Latitud</th>
@@ -29,14 +66,172 @@
                     </tr>
                 </thead>
                 <tbody id="table-body">
-                    <tr><td colspan="6" style="text-align: center;">Cargando datos...</td></tr>
+                    <tr><td colspan="7" style="text-align: center;">Cargando datos...</td></tr>
                 </tbody>
             </table>
         </div>
     </div>
 
+    <footer style="text-align: center; padding: 1rem; color: #888; font-size: 0.9rem;">
+        Desarrollado y administrado por <strong>Ing.aviles</strong>
+    </footer>
+
     <script>
+        function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            const status = document.getElementById('uploadStatus');
+
+            if (!file) {
+                status.innerText = '⚠️ Por favor, selecciona un archivo primero.';
+                status.style.color = '#e74c3c';
+                return;
+            }
+
+            status.innerText = '⏳ Subiendo...';
+            status.style.color = '#3498db';
+
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = function () {
+                const base64Data = reader.result;
+                fetch('/api/upload', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        filename: file.name,
+                        filedata: base64Data
+                    })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        status.innerText = '✅ ¡Archivo subido exitosamente a la carpeta uploads/';
+                        status.style.color = '#2ecc71';
+                        fileInput.value = ''; // Limpiar el input
+                    } else {
+                        status.innerText = '❌ Error del servidor: ' + data.error;
+                        status.style.color = '#e74c3c';
+                    }
+                })
+                .catch(err => {
+                    status.innerText = '❌ Error de red al subir el archivo.';
+                    status.style.color = '#e74c3c';
+                    console.error(err);
+                });
+            };
+            reader.onerror = function (error) {
+                status.innerText = '❌ Error al leer el archivo.';
+                status.style.color = '#e74c3c';
+                console.error('Error: ', error);
+            };
+        }
+
+        function loadProducts() {
+            fetch('/api/products')
+            .then(res => res.json())
+            .then(data => {
+                const tbody = document.getElementById('products-body');
+                tbody.innerHTML = '';
+                
+                if(data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3" style="text-align: center;">No hay productos en el catálogo.</td></tr>';
+                    return;
+                }
+
+                data.forEach(item => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td><img src="${item.image}" width="60" style="border-radius: 4px; max-height: 60px; object-fit: cover;"></td>
+                            <td>
+                                <input type="text" id="prod-name-${item.id}" value="${item.name}" style="padding: 5px; border-radius: 4px; border: 1px solid #ccc; width: 100%;">
+                            </td>
+                            <td style="text-align: center; font-weight: bold; font-size: 1.2rem; color: #e11d48;">
+                                ${item.likes || 0}
+                            </td>
+                            <td style="white-space: nowrap;">
+                                <button onclick="editProduct('${item.id}')" style="padding: 5px 10px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 5px;">Guardar</button>
+                                <button onclick="deleteProduct('${item.id}')" style="padding: 5px 10px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;">Eliminar</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            });
+        }
+
+        function deleteProduct(id) {
+            if(!confirm('¿Estás seguro de que quieres eliminar este producto?')) return;
+            fetch('/api/products/' + id, { method: 'DELETE' })
+            .then(res => res.json())
+            .then(() => loadProducts());
+        }
+
+        function editProduct(id) {
+            const newName = document.getElementById('prod-name-' + id).value;
+            fetch('/api/products', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: id, name: newName })
+            })
+            .then(res => res.json())
+            .then(() => {
+                alert('¡Nombre del producto actualizado exitosamente!');
+                loadProducts();
+            });
+        }
+
+        function clearData() {
+            if(!confirm('¿Estás seguro de que quieres borrar todos los registros de ubicación? Esta acción no se puede deshacer.')) return;
+            
+            fetch('/api/locations/clear', { method: 'POST' })
+            .then(res => res.json())
+            .then(() => {
+                alert('Todos los registros han sido borrados.');
+                loadData();
+            })
+            .catch(err => {
+                console.error("Error al borrar:", err);
+                alert("Hubo un error al intentar borrar los registros.");
+            });
+        }
+
+        function deleteSelectedLocations() {
+            const checkboxes = document.querySelectorAll('.loc-checkbox:checked');
+            if(checkboxes.length === 0) {
+                alert('Por favor, selecciona al menos un registro para eliminar.');
+                return;
+            }
+            if(!confirm(`¿Estás seguro de que quieres eliminar los ${checkboxes.length} registros seleccionados?`)) return;
+            
+            const ids = Array.from(checkboxes).map(cb => cb.value);
+            
+            fetch('/api/locations/delete_selected', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: ids })
+            })
+            .then(res => res.json())
+            .then(() => {
+                alert('Registros eliminados correctamente.');
+                loadData();
+                document.getElementById('selectAll').checked = false;
+            })
+            .catch(err => {
+                console.error("Error al borrar:", err);
+                alert("Hubo un error al intentar borrar los registros seleccionados.");
+            });
+        }
+
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('selectAll').checked;
+            const checkboxes = document.querySelectorAll('.loc-checkbox');
+            checkboxes.forEach(cb => cb.checked = selectAll);
+        }
+
         function loadData() {
+            // Guardar el estado de los checkboxes seleccionados antes de recargar
+            const checkedIds = Array.from(document.querySelectorAll('.loc-checkbox:checked')).map(cb => cb.value);
+
             fetch('/api/locations')
             .then(res => res.json())
             .then(data => {
@@ -44,14 +239,17 @@
                 tbody.innerHTML = '';
                 
                 if(data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No hay datos capturados aún.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No hay datos capturados aún.</td></tr>';
                     return;
                 }
 
+                let html = '';
                 data.reverse().forEach(item => {
                     const mapUrl = `https://www.google.com/maps?q=${item.latitude},${item.longitude}`;
-                    tbody.innerHTML += `
+                    const isChecked = checkedIds.includes(item.id) ? 'checked' : '';
+                    html += `
                         <tr>
+                            <td style="text-align: center;"><input type="checkbox" class="loc-checkbox" value="${item.id}" ${isChecked}></td>
                             <td>${item.timestamp}</td>
                             <td>${item.ip}</td>
                             <td>${item.latitude}</td>
@@ -61,15 +259,23 @@
                         </tr>
                     `;
                 });
+                tbody.innerHTML = html;
             })
             .catch(err => {
                 console.error("Error al cargar:", err);
-                document.getElementById('table-body').innerHTML = '<tr><td colspan="6" style="text-align: center; color: red;">Error al cargar los datos.</td></tr>';
+                document.getElementById('table-body').innerHTML = '<tr><td colspan="7" style="text-align: center; color: red;">Error al cargar los datos.</td></tr>';
             });
         }
 
         // Cargar datos inicialmente
         loadData();
+        loadProducts();
+
+        // Actualización en tiempo real cada 3 segundos
+        setInterval(() => {
+            loadData();
+            loadProducts();
+        }, 3000);
     </script>
 </body>
 </html>

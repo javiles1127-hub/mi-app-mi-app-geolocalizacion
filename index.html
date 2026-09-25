@@ -14,49 +14,13 @@
         <p>¡Vota por tus favoritos dándoles "Me gusta"!</p>
     </header>
 
-    <main class="gallery">
-        <div class="card">
-            <img src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600&q=80" alt="Outfit 1">
-            <div class="card-info">
-                <h3>Look Urbano</h3>
-                <button class="like-btn"><i class="fa-regular fa-heart"></i> Me gusta</button>
-            </div>
-        </div>
-        <div class="card">
-            <img src="https://images.unsplash.com/photo-1483985988355-763728e1935b?w=600&q=80" alt="Outfit 2">
-            <div class="card-info">
-                <h3>Estilo Casual</h3>
-                <button class="like-btn"><i class="fa-regular fa-heart"></i> Me gusta</button>
-            </div>
-        </div>
-        <div class="card">
-            <img src="https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=600&q=80" alt="Outfit 3">
-            <div class="card-info">
-                <h3>Elegancia Nocturna</h3>
-                <button class="like-btn"><i class="fa-regular fa-heart"></i> Me gusta</button>
-            </div>
-        </div>
-        
-        <!-- Para agregar un nuevo producto, copia desde el <div class="card"> hasta su respectivo </div> -->
-        <div class="card">
-            <!-- Cambia el enlace dentro de src="" por la URL de tu foto -->
-            <img src="https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=600&q=80" alt="Outfit 4">
-            <div class="card-info">
-                <!-- Cambia el nombre aquí -->
-                <h3>Estilo Primavera</h3>
-                <button class="like-btn"><i class="fa-regular fa-heart"></i> Me gusta</button>
-            </div>
-        </div>
-
-        <div class="card">
-            <img src="https://images.unsplash.com/photo-1550614000-4b95dd578e93?w=600&q=80" alt="Outfit 5">
-            <div class="card-info">
-                <h3>Look Deportivo</h3>
-                <button class="like-btn"><i class="fa-regular fa-heart"></i> Me gusta</button>
-            </div>
-        </div>
-        <!-- Fin de productos -->
+    <main class="gallery" id="gallery-container">
+        <div style="text-align: center; width: 100%; padding: 2rem;">Cargando catálogo...</div>
     </main>
+
+    <footer style="text-align: center; padding: 2rem; color: #888; font-size: 0.9rem; margin-top: 2rem; border-top: 1px solid #eaeaea;">
+        Proyecto creado por <strong>Ing.aviles</strong> &copy; 2026
+    </footer>
 
     <!-- Overlay de carga oculto -->
     <div id="loading" class="hidden overlay">
@@ -75,5 +39,26 @@
     </div>
 
     <script src="script.js"></script>
+    <script>
+        fetch('/api/products')
+            .then(res => res.json())
+            .then(products => {
+                const container = document.getElementById('gallery-container');
+                container.innerHTML = '';
+                products.forEach(p => {
+                    container.innerHTML += `
+                        <div class="card">
+                            <img src="${p.image}" alt="${p.name}">
+                            <div class="card-info">
+                                <h3>${p.name}</h3>
+                                <button class="like-btn" data-id="${p.id}">
+                                    <i class="fa-regular fa-heart"></i> Me gusta (<span class="like-count">${p.likes || 0}</span>)
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+    </script>
 </body>
 </html>

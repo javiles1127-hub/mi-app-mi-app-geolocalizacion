@@ -26,7 +26,7 @@ body { background: var(--bg); color: var(--text); }
 }
 .card:hover { transform: translateY(-5px); }
 
-.card img { width: 100%; height: 350px; object-fit: cover; }
+.card img { width: 100%; height: 350px; object-fit: cover; object-position: center top; }
 .card-info { padding: 1.5rem; display: flex; justify-content: space-between; align-items: center; }
 .card-info h3 { font-size: 1.2rem; font-weight: 600; }
 
