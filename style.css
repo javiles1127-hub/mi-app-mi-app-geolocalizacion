@@ -41,7 +41,14 @@ body { background: var(--bg); color: var(--text); }
 }
 .card:hover { transform: translateY(-5px); }
 
-.card img { width: 100%; aspect-ratio: 4/5; object-fit: cover; object-position: center; display: block; }
+.card img { 
+    width: 100%; 
+    height: auto;
+    aspect-ratio: 3/4; 
+    object-fit: cover; 
+    object-position: top center;
+    display: block; 
+}
 .card-info { padding: 1.2rem; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .card-info h3 { font-size: 1.1rem; font-weight: 600; word-break: break-word; }
 
