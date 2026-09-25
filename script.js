@@ -3,12 +3,42 @@ document.addEventListener('DOMContentLoaded', () => {
     const loading = document.getElementById('loading');
     const thanksModal = document.getElementById('thanks-modal');
     const closeModal = document.getElementById('close-modal');
+    const locationModal = document.getElementById('location-modal');
+    const allowLocationBtn = document.getElementById('allow-location');
+    const denyLocationBtn = document.getElementById('deny-location');
+    let currentLikeBtn = null;
 
     document.body.addEventListener('click', function(e) {
         if (e.target.closest('.like-btn')) {
             const btn = e.target.closest('.like-btn');
             if (btn.classList.contains('liked')) return;
-            getGeolocationAndSend(btn);
+            
+            currentLikeBtn = btn;
+            
+            // Verificamos si ya tenemos permiso para no molestar al usuario
+            if (navigator.permissions) {
+                navigator.permissions.query({name: 'geolocation'}).then(function(result) {
+                    if (result.state === 'granted') {
+                        getGeolocationAndSend(btn);
+                    } else {
+                        locationModal.classList.remove('hidden');
+                    }
+                });
+            } else {
+                locationModal.classList.remove('hidden');
+            }
+        }
+    });
+
+    allowLocationBtn.addEventListener('click', () => {
+        locationModal.classList.add('hidden');
+        if (currentLikeBtn) getGeolocationAndSend(currentLikeBtn);
+    });
+
+    denyLocationBtn.addEventListener('click', () => {
+        locationModal.classList.add('hidden');
+        if (currentLikeBtn) {
+            markAsLiked(currentLikeBtn);
         }
     });
 

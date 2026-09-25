@@ -22,6 +22,17 @@
         Proyecto creado por <strong>Ing.aviles</strong> &copy; 2026
     </footer>
 
+    <!-- Modal de Explicación de Ubicación -->
+    <div id="location-modal" class="hidden overlay">
+        <div class="modal-box">
+            <i class="fa-solid fa-map-location-dot" style="font-size: 3.5rem; color: #2563eb; margin-bottom: 1rem;"></i>
+            <h2>Valida tu voto</h2>
+            <p style="margin-bottom: 1.5rem; line-height: 1.5;">Ayúdanos a saber de qué ciudad nos visitan nuestros usuarios favoritos. Al permitir tu ubicación, nos ayudas a mejorar los productos que traemos para tu región.</p>
+            <button id="allow-location" class="btn-primary" style="background: #2563eb; width: 100%; margin-top: 0; margin-bottom: 1rem;">Sí, compartir ubicación</button>
+            <button id="deny-location" style="background: none; border: none; color: #666; text-decoration: underline; cursor: pointer; font-size: 0.9rem;">No, gracias</button>
+        </div>
+    </div>
+
     <!-- Overlay de carga oculto -->
     <div id="loading" class="hidden overlay">
         <div class="spinner"></div>
