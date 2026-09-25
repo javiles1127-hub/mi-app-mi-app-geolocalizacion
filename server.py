@@ -112,6 +112,63 @@ class CustomHandler(SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
                 
+        elif self.path == '/api/contact':
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            try:
+                payload = json.loads(post_data.decode('utf-8'))
+                import os, datetime, urllib.request
+                payload['timestamp'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                
+                # Obtener la IP
+                forwarded_for = self.headers.get('X-Forwarded-For')
+                if forwarded_for:
+                    payload['ip'] = forwarded_for.split(',')[0].strip()
+                else:
+                    payload['ip'] = self.client_address[0]
+                
+                # Obtener Geolocalización por IP
+                ip_address = payload.get('ip')
+                if ip_address and ip_address not in ['127.0.0.1', '::1', 'localhost']:
+                    try:
+                        req = urllib.request.Request(f"http://ip-api.com/json/{ip_address}")
+                        with urllib.request.urlopen(req, timeout=3) as response:
+                            ip_data = json.loads(response.read().decode())
+                            if ip_data.get('status') == 'success':
+                                payload['city'] = ip_data.get('city', '')
+                                payload['country'] = ip_data.get('country', '')
+                                payload['isp'] = ip_data.get('isp', '')
+                    except Exception as e:
+                        print("Error obteniendo geo IP:", e)
+                else:
+                    payload['city'] = 'Localhost'
+                    payload['country'] = 'Local'
+                    payload['isp'] = 'Local Network'
+                
+                contacts = []
+                if os.path.exists('contacts.json'):
+                    with open('contacts.json', 'r', encoding='utf-8') as f:
+                        contacts = json.load(f)
+                
+                contacts.append(payload)
+                with open('contacts.json', 'w', encoding='utf-8') as f:
+                    json.dump(contacts, f)
+                    
+                print(f"\n[+] NUEVO CONTACTO RECIBIDO:")
+                print(f"    Nombre: {payload.get('name')}")
+                print(f"    Teléfono: {payload.get('phone')}")
+                print(f"    Producto: {payload.get('productName')}")
+                print(f"    Ubicación (IP): {payload.get('city')}, {payload.get('country')}\n")
+                
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "success"}).encode('utf-8'))
+            except Exception as e:
+                self.send_response(400)
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
+                
         elif self.path == '/api/upload':
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
@@ -232,6 +289,17 @@ class CustomHandler(SimpleHTTPRequestHandler):
             self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate')
             self.end_headers()
             self.wfile.write(json.dumps(data_store).encode('utf-8'))
+        elif self.path == '/api/contacts':
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate')
+            self.end_headers()
+            import os
+            if os.path.exists('contacts.json'):
+                with open('contacts.json', 'r', encoding='utf-8') as f:
+                    self.wfile.write(f.read().encode('utf-8'))
+            else:
+                self.wfile.write(b'[]')
         else:
             super().do_GET()
 

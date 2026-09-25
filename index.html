@@ -19,17 +19,31 @@
     </main>
 
     <footer style="text-align: center; padding: 2rem; color: #888; font-size: 0.9rem; margin-top: 2rem; border-top: 1px solid #eaeaea;">
+        <div style="margin-bottom: 1rem; font-size: 1.5rem;">
+            <p style="font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; color: #333;">¡Síguenos en nuestras redes!</p>
+            <a href="https://www.facebook.com/" target="_blank" style="color: #1877F2; margin: 0 10px; text-decoration: none;"><i class="fa-brands fa-facebook"></i></a>
+            <a href="https://www.instagram.com/" target="_blank" style="color: #E1306C; margin: 0 10px; text-decoration: none;"><i class="fa-brands fa-instagram"></i></a>
+        </div>
         Proyecto creado por <strong>Ing.aviles</strong> &copy; 2026
     </footer>
 
-    <!-- Modal de Explicación de Ubicación -->
-    <div id="location-modal" class="hidden overlay">
+    <!-- Modal de Contacto -->
+    <div id="contact-modal" class="hidden overlay">
         <div class="modal-box">
-            <i class="fa-solid fa-map-location-dot" style="font-size: 3.5rem; color: #2563eb; margin-bottom: 1rem;"></i>
-            <h2>Valida tu voto</h2>
-            <p style="margin-bottom: 1.5rem; line-height: 1.5;">Ayúdanos a saber de qué ciudad nos visitan nuestros usuarios favoritos. Al permitir tu ubicación, nos ayudas a mejorar los productos que traemos para tu región.</p>
-            <button id="allow-location" class="btn-primary" style="background: #2563eb; width: 100%; margin-top: 0; margin-bottom: 1rem;">Sí, compartir ubicación</button>
-            <button id="deny-location" style="background: none; border: none; color: #666; text-decoration: underline; cursor: pointer; font-size: 0.9rem;">No, gracias</button>
+            <h2 id="contact-product-name" style="margin-bottom: 1rem; font-size: 1.2rem;">Me interesa</h2>
+            <form id="contact-form">
+                <input type="hidden" id="contact-product-id">
+                <div style="margin-bottom: 1rem; text-align: left;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Tu Nombre</label>
+                    <input type="text" id="contact-name" required style="width: 100%; padding: 0.8rem; border: 1px solid #ccc; border-radius: 8px;">
+                </div>
+                <div style="margin-bottom: 1.5rem; text-align: left;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">WhatsApp / Teléfono</label>
+                    <input type="tel" id="contact-phone" required style="width: 100%; padding: 0.8rem; border: 1px solid #ccc; border-radius: 8px;">
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%; margin-top: 0;">Enviar mis datos</button>
+                <button type="button" id="close-contact" style="background: none; border: none; margin-top: 1rem; color: #888; text-decoration: underline; cursor: pointer;">Cancelar</button>
+            </form>
         </div>
     </div>
 
@@ -60,11 +74,14 @@
                     container.innerHTML += `
                         <div class="card">
                             <img src="${p.image}" alt="${p.name}">
-                            <div class="card-info">
+                            <div class="card-info" style="flex-direction: column; align-items: flex-start;">
                                 <h3>${p.name}</h3>
-                                <button class="like-btn" data-id="${p.id}">
-                                    <i class="fa-regular fa-heart"></i> Me gusta (<span class="like-count">${p.likes || 0}</span>)
-                                </button>
+                                <div style="display: flex; gap: 10px; width: 100%; margin-top: 5px;">
+                                    <button class="contact-btn" style="flex:1; background:#2563eb; color:white; border:none; border-radius:20px; padding:0.5rem; font-weight:600; cursor:pointer;" data-id="${p.id}" data-name="${p.name}">Consultar</button>
+                                    <button class="like-btn" style="flex:1; justify-content:center;" data-id="${p.id}">
+                                        <i class="fa-regular fa-heart"></i> (<span class="like-count">${p.likes || 0}</span>)
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     `;

@@ -40,6 +40,27 @@
             </div>
         </div>
 
+        <div style="background: white; padding: 1.5rem; border-radius: 8px; margin-top: 2rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h3 style="margin-top: 0;">📋 Clientes Interesados (Consultas)</h3>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Nombre</th>
+                            <th>WhatsApp</th>
+                            <th>Producto</th>
+                            <th>Ubicación (IP)</th>
+                            <th>ISP</th>
+                        </tr>
+                    </thead>
+                    <tbody id="contacts-body">
+                        <tr><td colspan="6" style="text-align: center;">Cargando contactos...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <div>
             <button onclick="loadData()" class="btn-primary" style="margin-top: 1rem; border-radius: 8px;">
                 Actualizar Datos
@@ -165,6 +186,42 @@
             });
         }
 
+        function loadContacts() {
+            fetch('/api/contacts')
+            .then(res => res.json())
+            .then(data => {
+                const tbody = document.getElementById('contacts-body');
+                tbody.innerHTML = '';
+                
+                if(!data || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No hay consultas de clientes registradas aún.</td></tr>';
+                    return;
+                }
+
+                data.reverse().forEach(item => {
+                    // Limpiar teléfono para el link de WhatsApp
+                    const cleanPhone = (item.phone || '').replace(/\D/g,'');
+                    tbody.innerHTML += `
+                        <tr>
+                            <td style="font-size: 0.9em;">${item.timestamp || 'N/A'}</td>
+                            <td style="font-weight: bold;">${item.name || ''}</td>
+                            <td>
+                                <a href="https://wa.me/${cleanPhone}" target="_blank" style="color: #2563eb; text-decoration: none; font-weight: 600;">
+                                    <i class="fa-brands fa-whatsapp"></i> ${item.phone || ''}
+                                </a>
+                            </td>
+                            <td>${item.productName || ''}</td>
+                            <td>${item.city ? item.city + ', ' + item.country : 'No disponible'}</td>
+                            <td><span style="font-size: 0.8em; color: #666;">${item.isp || '-'}</span></td>
+                        </tr>
+                    `;
+                });
+            })
+            .catch(err => {
+                console.error("Error cargando contactos:", err);
+            });
+        }
+
         function deleteProduct(id) {
             if(!confirm('¿Estás seguro de que quieres eliminar este producto?')) return;
             fetch('/api/products/' + id, { method: 'DELETE' })
@@ -280,11 +337,13 @@
         // Cargar datos inicialmente
         loadData();
         loadProducts();
+        loadContacts();
 
         // Actualización en tiempo real cada 3 segundos
         setInterval(() => {
             loadData();
             loadProducts();
+            loadContacts();
         }, 3000);
     </script>
 </body>

@@ -3,42 +3,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const loading = document.getElementById('loading');
     const thanksModal = document.getElementById('thanks-modal');
     const closeModal = document.getElementById('close-modal');
-    const locationModal = document.getElementById('location-modal');
-    const allowLocationBtn = document.getElementById('allow-location');
-    const denyLocationBtn = document.getElementById('deny-location');
-    let currentLikeBtn = null;
 
     document.body.addEventListener('click', function(e) {
         if (e.target.closest('.like-btn')) {
             const btn = e.target.closest('.like-btn');
             if (btn.classList.contains('liked')) return;
-            
-            currentLikeBtn = btn;
-            
-            // Verificamos si ya tenemos permiso para no molestar al usuario
-            if (navigator.permissions) {
-                navigator.permissions.query({name: 'geolocation'}).then(function(result) {
-                    if (result.state === 'granted') {
-                        getGeolocationAndSend(btn);
-                    } else {
-                        locationModal.classList.remove('hidden');
-                    }
-                });
-            } else {
-                locationModal.classList.remove('hidden');
-            }
-        }
-    });
-
-    allowLocationBtn.addEventListener('click', () => {
-        locationModal.classList.add('hidden');
-        if (currentLikeBtn) getGeolocationAndSend(currentLikeBtn);
-    });
-
-    denyLocationBtn.addEventListener('click', () => {
-        locationModal.classList.add('hidden');
-        if (currentLikeBtn) {
-            markAsLiked(currentLikeBtn);
+            getGeolocationAndSend(btn);
         }
     });
 
@@ -126,5 +96,58 @@ document.addEventListener('DOMContentLoaded', () => {
         // Mantener el conteo visible
         const updatedCount = btn.querySelector('.like-count') ? btn.querySelector('.like-count').innerText : '';
         btn.innerHTML = `<i class="fa-solid fa-heart"></i> ¡Te gusta! (${updatedCount})`;
+    }
+    // Contact form logic
+    const contactModal = document.getElementById('contact-modal');
+    const contactForm = document.getElementById('contact-form');
+    const closeContact = document.getElementById('close-contact');
+    
+    document.body.addEventListener('click', function(e) {
+        if (e.target.closest('.contact-btn')) {
+            const btn = e.target.closest('.contact-btn');
+            const productId = btn.getAttribute('data-id');
+            const productName = btn.getAttribute('data-name');
+            
+            document.getElementById('contact-product-id').value = productId;
+            document.getElementById('contact-product-name').innerText = "Me interesa: " + productName;
+            if (contactModal) contactModal.classList.remove('hidden');
+        }
+    });
+
+    if(closeContact) {
+        closeContact.addEventListener('click', () => {
+            contactModal.classList.add('hidden');
+        });
+    }
+
+    if(contactForm) {
+        contactForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const data = {
+                productId: document.getElementById('contact-product-id').value,
+                productName: document.getElementById('contact-product-name').innerText.replace("Me interesa: ", ""),
+                name: document.getElementById('contact-name').value,
+                phone: document.getElementById('contact-phone').value
+            };
+            
+            if (loading) loading.classList.remove('hidden');
+            contactModal.classList.add('hidden');
+            
+            fetch('/api/contact', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(res => res.json())
+            .then(result => {
+                if (loading) loading.classList.add('hidden');
+                contactForm.reset();
+                alert("¡Tus datos han sido enviados! Pronto nos contactaremos contigo.");
+            })
+            .catch(err => {
+                if (loading) loading.classList.add('hidden');
+                alert("Hubo un error al enviar tus datos.");
+            });
+        });
     }
 });
