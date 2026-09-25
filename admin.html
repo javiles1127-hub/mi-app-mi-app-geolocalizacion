@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración - Ubicaciones</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body style="background: #f1f5f9;">
+    <div class="admin-container">
+        <h1>📍 Registro de Ubicaciones Capturadas</h1>
+        <p>Aquí aparecerán las coordenadas de las personas que dieron "Me gusta" al catálogo.</p>
+        
+        <button onclick="loadData()" class="btn-primary" style="margin-top: 1rem; border-radius: 8px;">
+            Actualizar Datos
+        </button>
+
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Fecha y Hora</th>
+                        <th>IP</th>
+                        <th>Latitud</th>
+                        <th>Longitud</th>
+                        <th>Precisión</th>
+                        <th>Enlace</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    <tr><td colspan="6" style="text-align: center;">Cargando datos...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        function loadData() {
+            fetch('/api/locations')
+            .then(res => res.json())
+            .then(data => {
+                const tbody = document.getElementById('table-body');
+                tbody.innerHTML = '';
+                
+                if(data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No hay datos capturados aún.</td></tr>';
+                    return;
+                }
+
+                data.reverse().forEach(item => {
+                    const mapUrl = `https://www.google.com/maps?q=${item.latitude},${item.longitude}`;
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${item.timestamp}</td>
+                            <td>${item.ip}</td>
+                            <td>${item.latitude}</td>
+                            <td>${item.longitude}</td>
+                            <td>±${Math.round(item.accuracy)}m</td>
+                            <td><a href="${mapUrl}" target="_blank" class="map-link">Ver en Google Maps</a></td>
+                        </tr>
+                    `;
+                });
+            })
+            .catch(err => {
+                console.error("Error al cargar:", err);
+                document.getElementById('table-body').innerHTML = '<tr><td colspan="6" style="text-align: center; color: red;">Error al cargar los datos.</td></tr>';
+            });
+        }
+
+        // Cargar datos inicialmente
+        loadData();
+    </script>
+</body>
+</html>
