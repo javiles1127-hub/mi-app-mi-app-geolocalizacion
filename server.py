@@ -134,7 +134,7 @@ class CustomHandler(SimpleHTTPRequestHandler):
                     location['ip'] = forwarded_for.split(',')[0].strip()
                 else:
                     location['ip'] = self.client_address[0]
-                import uuid, os
+                import uuid, os, datetime
                 location['id'] = str(uuid.uuid4())
                 location['timestamp'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 
