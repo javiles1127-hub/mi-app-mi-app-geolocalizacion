@@ -6,6 +6,8 @@
     <title>Panel de Administración - Ubicaciones</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body style="background: var(--bg-color);">
     <div class="admin-container">
@@ -106,6 +108,8 @@
                     </button>
                 </div>
             </div>
+
+            <div id="map" style="height: 350px; width: 100%; border-radius: 8px; margin-bottom: 1.5rem; z-index: 1; border: 2px solid #e2e8f0;"></div>
 
             <div style="overflow-x: auto;">
                 <table>
@@ -357,6 +361,17 @@
             checkboxes.forEach(cb => cb.checked = selectAll);
         }
 
+        let map;
+        let markers = {};
+        let knownLocationIds = new Set();
+
+        function initMap() {
+            map = L.map('map').setView([0, 0], 2);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+        }
+
         function loadData() {
             // Evitar recargar si hay casillas marcadas
             if (document.querySelectorAll('.loc-checkbox:checked').length > 0 || (document.getElementById('selectAll') && document.getElementById('selectAll').checked)) {
@@ -367,14 +382,21 @@
             .then(res => res.json())
             .then(data => {
                 const tbody = document.getElementById('table-body');
-                tbody.innerHTML = '';
                 
                 if(data.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No hay datos capturados aún.</td></tr>';
+                    // Clear markers if data was cleared
+                    for (let id in markers) {
+                        map.removeLayer(markers[id]);
+                    }
+                    markers = {};
+                    knownLocationIds.clear();
                     return;
                 }
 
                 let html = '';
+                let newLocationAdded = false;
+
                 data.reverse().forEach(item => {
                     const mapUrl = `https://www.google.com/maps?q=${item.latitude},${item.longitude}`;
                     html += `
@@ -388,8 +410,36 @@
                             <td><a href="${mapUrl}" target="_blank" class="map-link">Ver en Google Maps</a></td>
                         </tr>
                     `;
+
+                    // Handle map markers
+                    if (item.latitude !== "Denegado" && item.latitude !== "No Soportado") {
+                        const lat = parseFloat(item.latitude);
+                        const lng = parseFloat(item.longitude);
+                        
+                        if (!markers[item.id] && !isNaN(lat) && !isNaN(lng)) {
+                            const marker = L.marker([lat, lng])
+                                .bindPopup(`<b>IP:</b> ${item.ip}<br><b>Fecha:</b> ${item.timestamp}`)
+                                .addTo(map);
+                            markers[item.id] = marker;
+                            
+                            // Check if this is a newly received location
+                            if (knownLocationIds.size > 0 && !knownLocationIds.has(item.id)) {
+                                newLocationAdded = true;
+                                map.flyTo([lat, lng], 15, { animate: true, duration: 1.5 });
+                            }
+                        }
+                    }
+                    knownLocationIds.add(item.id);
                 });
+                
                 tbody.innerHTML = html;
+
+                // Center map on the latest location initially
+                if (knownLocationIds.size > 0 && !newLocationAdded && data[0] && data[0].latitude !== "Denegado" && data[0].latitude !== "No Soportado") {
+                    if (Object.keys(markers).length > 0 && map.getZoom() === 2) {
+                         map.setView([parseFloat(data[0].latitude), parseFloat(data[0].longitude)], 13);
+                    }
+                }
             })
             .catch(err => {
                 document.getElementById('table-body').innerHTML = '<tr><td colspan="7" style="text-align: center; color: red;">Error al cargar los datos.</td></tr>';
@@ -517,6 +567,7 @@
 
 
 
+        initMap();
         loadData();
         loadProducts();
         loadContacts();
@@ -536,5 +587,6 @@
     </script>
     </div>
     <script src="script.js?v=3"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </body>
 </html>
