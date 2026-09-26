@@ -90,6 +90,25 @@
             </div>
         </div>
 
+        <div style="background: white; padding: 1.5rem; border-radius: 8px; margin-top: 2rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h3 style="margin-top: 0; color: #8b5cf6;">💾 Copia de Seguridad (Backup)</h3>
+            <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1rem;">Dado que Render borra los archivos cada vez que se reinicia el servidor, descarga una copia de seguridad frecuentemente. Si el servidor se reinicia, puedes restaurarla aquí para no perder nada.</p>
+            
+            <div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center;">
+                <button onclick="downloadBackup()" style="background: #8b5cf6; color: white; border: none; padding: 0.8rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s;">
+                    📥 Descargar Copia de Seguridad
+                </button>
+                
+                <div style="display: flex; gap: 10px; align-items: center; border-left: 2px solid #eee; padding-left: 15px;">
+                    <input type="file" id="backupInput" accept=".zip" style="font-size: 0.9rem;">
+                    <button onclick="restoreBackup()" style="background: #f59e0b; color: white; border: none; padding: 0.8rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s;">
+                        📤 Restaurar Copia
+                    </button>
+                </div>
+            </div>
+            <p id="backupStatus" style="margin-top: 10px; font-weight: 600; font-size: 0.9rem;"></p>
+        </div>
+
 
     </div>
 
@@ -184,6 +203,57 @@
                     `;
                 });
             });
+        }
+
+        function downloadBackup() {
+            window.location.href = '/api/backup/download';
+        }
+
+        function restoreBackup() {
+            const fileInput = document.getElementById('backupInput');
+            const file = fileInput.files[0];
+            const status = document.getElementById('backupStatus');
+
+            if (!file) {
+                status.innerText = '⚠️ Por favor, selecciona un archivo .zip de backup.';
+                status.style.color = '#e74c3c';
+                return;
+            }
+
+            if (!confirm('¿Estás seguro de restaurar esta copia? Esto sobreescribirá los productos y contactos actuales.')) return;
+
+            status.innerText = '⏳ Restaurando...';
+            status.style.color = '#3498db';
+
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = function () {
+                const base64Data = reader.result;
+                fetch('/api/backup/restore', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        filedata: base64Data
+                    })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        status.innerText = '✅ ¡Copia restaurada con éxito!';
+                        status.style.color = '#2ecc71';
+                        fileInput.value = '';
+                        loadProducts();
+                        loadContacts();
+                    } else {
+                        status.innerText = '❌ Error del servidor: ' + data.error;
+                        status.style.color = '#e74c3c';
+                    }
+                })
+                .catch(err => {
+                    status.innerText = '❌ Error de red al restaurar.';
+                    status.style.color = '#e74c3c';
+                });
+            };
         }
 
         function loadContacts() {

@@ -92,7 +92,7 @@ class CustomHandler(SimpleHTTPRequestHandler):
             return
             
         # Proteccion de rutas POST administrativas
-        protected_paths = ['/api/upload', '/api/contacts/clear', '/api/locations/clear', '/api/contacts/delete_selected', '/api/locations/delete_selected']
+        protected_paths = ['/api/upload', '/api/contacts/clear', '/api/locations/clear', '/api/contacts/delete_selected', '/api/locations/delete_selected', '/api/backup/restore']
         if self.path in protected_paths:
             if not self.check_auth():
                 self.request_auth(is_api=True)
@@ -376,6 +376,36 @@ class CustomHandler(SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps({"status": "success"}).encode('utf-8'))
 
+        elif self.path == '/api/backup/restore':
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            try:
+                payload = json.loads(post_data.decode('utf-8'))
+                filedata_b64 = payload.get('filedata')
+                
+                if "," in filedata_b64:
+                    filedata_b64 = filedata_b64.split(",")[1]
+                    
+                import base64
+                import zipfile
+                import io
+                import os
+                
+                zip_data = base64.b64decode(filedata_b64)
+                memory_file = io.BytesIO(zip_data)
+                
+                with zipfile.ZipFile(memory_file, 'r') as zf:
+                    zf.extractall('.')
+                
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "success"}).encode('utf-8'))
+            except Exception as e:
+                self.send_response(400)
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
+
         elif self.path == '/api/contacts/clear':
             with open('contacts.json', 'w', encoding='utf-8') as f:
                 f.write('[]')
@@ -440,6 +470,33 @@ class CustomHandler(SimpleHTTPRequestHandler):
                 self.request_auth(is_api=False)
                 return
                 
+        if self.path == '/api/backup/download':
+            if not self.check_auth():
+                self.request_auth(is_api=True)
+                return
+            import zipfile
+            import io
+            import os
+            
+            memory_file = io.BytesIO()
+            with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+                if os.path.exists('products.json'):
+                    zf.write('products.json')
+                if os.path.exists('contacts.json'):
+                    zf.write('contacts.json')
+                if os.path.exists('uploads') and os.path.isdir('uploads'):
+                    for root, dirs, files in os.walk('uploads'):
+                        for file in files:
+                            zf.write(os.path.join(root, file))
+                            
+            memory_file.seek(0)
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/zip')
+            self.send_header('Content-Disposition', 'attachment; filename="backup_tienda.zip"')
+            self.end_headers()
+            self.wfile.write(memory_file.read())
+            return
+
         protected_paths_get = ['/api/locations', '/api/contacts']
         if self.path in protected_paths_get:
             if not self.check_auth():
