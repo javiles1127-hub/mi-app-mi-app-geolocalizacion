@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     loading.classList.add('hidden');
                     markAsLiked(btnElement);
                 },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
             );
         } else {
             loading.classList.add('hidden');
@@ -163,7 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         console.warn("GPS denegado o error, enviando solo IP:", error);
                         sendContactData(data);
                     },
-                    { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+                    { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
                 );
             } else {
                 sendContactData(data);

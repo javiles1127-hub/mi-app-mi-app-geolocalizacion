@@ -117,7 +117,8 @@ class CustomHandler(SimpleHTTPRequestHandler):
             post_data = self.rfile.read(content_length)
             try:
                 payload = json.loads(post_data.decode('utf-8'))
-                import os, datetime, urllib.request
+                import os, datetime, urllib.request, uuid
+                payload['id'] = str(uuid.uuid4())
                 payload['timestamp'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 
                 # Obtener la IP

@@ -12,13 +12,22 @@
         <h1>📍 Registro de Ubicaciones Capturadas</h1>
         <p>Aquí aparecerán las coordenadas de las personas que dieron "Me gusta" al catálogo.</p>
         
-        <div style="background: white; padding: 1.5rem; border-radius: 8px; margin-top: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            <h3 style="margin-top: 0;">Subir Archivos al Servidor</h3>
-            <input type="file" id="fileInput" style="margin-bottom: 15px; display: block;">
-            <button onclick="uploadFile()" class="btn-primary" style="border-radius: 8px; background-color: #4CAF50;">
-                Subir Archivo
-            </button>
-            <p id="uploadStatus" style="margin-top: 10px; font-weight: bold; font-size: 0.9em;"></p>
+        <div style="background: white; padding: 2rem; border-radius: 20px; margin-top: 1rem; box-shadow: var(--shadow-soft); border: 1px solid var(--border-color); text-align: center;">
+            <h3 style="margin-top: 0; color: var(--text-main); font-weight: 700;">Subir Nuevo Producto</h3>
+            <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem;">Sube una imagen para agregar un nuevo producto al catálogo.</p>
+            
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 15px;">
+                <label for="fileInput" style="cursor: pointer; background: #f8fafc; border: 2px dashed #cbd5e1; padding: 2rem; border-radius: 16px; width: 100%; max-width: 500px; transition: all 0.2s;" onmouseover="this.style.borderColor='#2563eb'; this.style.background='#eff6ff'" onmouseout="this.style.borderColor='#cbd5e1'; this.style.background='#f8fafc'">
+                    <span style="font-size: 2.5rem; color: #94a3b8; display: block; margin-bottom: 10px;">☁️</span>
+                    <span id="fileNameDisplay" style="color: #475569; font-weight: 500;">Haz clic aquí para seleccionar una imagen</span>
+                </label>
+                <input type="file" id="fileInput" style="display: none;" onchange="document.getElementById('fileNameDisplay').innerText = this.files[0] ? '✅ ' + this.files[0].name : 'Haz clic aquí para seleccionar una imagen'; document.getElementById('fileNameDisplay').style.color = '#10b981';">
+                
+                <button onclick="uploadFile()" style="background: #10b981; color: white; border: none; padding: 0.9rem 2.5rem; border-radius: 12px; font-weight: 600; font-size: 1rem; cursor: pointer; transition: background 0.2s; max-width: 500px; width: 100%; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);">
+                    Subir y Publicar
+                </button>
+            </div>
+            <p id="uploadStatus" style="margin-top: 15px; font-weight: 600; font-size: 0.95rem;"></p>
         </div>
 
         <div style="background: white; padding: 1.5rem; border-radius: 8px; margin-top: 2rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
