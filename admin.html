@@ -11,8 +11,8 @@
     <div class="admin-container">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
             <div>
-                <h1 style="margin-bottom: 5px;">⚙️ Panel de Administración</h1>
-                <p style="margin-top: 0;">Gestiona tu catálogo de productos y las consultas de los clientes.</p>
+                <h1 style="margin-bottom: 5px;">📍 Panel de Administración y Ubicaciones</h1>
+                <p style="margin-top: 0;">Gestiona tu catálogo de productos, las consultas de los clientes y las coordenadas GPS capturadas.</p>
                 <div style="margin-top: 10px; display: inline-block; padding: 5px 10px; background: #e0f2fe; color: #0369a1; border-radius: 6px; font-weight: 600; font-size: 0.9rem;">
                     <i class="fa-solid fa-users"></i> <span class="online-count-display">1</span> en línea
                 </div>
@@ -85,6 +85,43 @@
                     </thead>
                     <tbody id="contacts-body">
                         <tr><td colspan="9" style="text-align: center;">Cargando contactos...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div style="background: white; padding: 1.5rem; border-radius: 8px; margin-top: 2rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <div>
+                    <h3 style="margin-top: 0; display: flex; align-items: center; gap: 10px;">
+                        📍 Ubicaciones Capturadas (GPS)
+                    </h3>
+                </div>
+                <div>
+                    <button onclick="deleteSelectedLocations()" style="background-color: #f39c12; color: white; padding: 10px 15px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-right: 10px;">
+                        Eliminar Seleccionados
+                    </button>
+                    <button onclick="clearData()" style="background-color: #e74c3c; color: white; padding: 10px 15px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                        Borrar Todos los Registros
+                    </button>
+                </div>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 40px; text-align: center;"><input type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>
+                            <th>Fecha y Hora</th>
+                            <th>IP</th>
+                            <th>Latitud</th>
+                            <th>Longitud</th>
+                            <th>Precisión</th>
+                            <th>Enlace</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body">
+                        <tr><td colspan="7" style="text-align: center;">Cargando datos...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -274,6 +311,91 @@
             };
         }
 
+        function clearData() {
+            if(!confirm('¿Estás seguro de que quieres borrar todos los registros de ubicación? Esta acción no se puede deshacer.')) return;
+            
+            fetch('/api/locations/clear', { method: 'POST' })
+            .then(res => res.json())
+            .then(() => {
+                alert('Todos los registros han sido borrados.');
+                const selectAll = document.getElementById('selectAll');
+                if (selectAll) selectAll.checked = false;
+                document.querySelectorAll('.loc-checkbox').forEach(cb => cb.checked = false);
+                loadData();
+            })
+            .catch(err => alert("Hubo un error al intentar borrar los registros."));
+        }
+
+        function deleteSelectedLocations() {
+            const checkboxes = document.querySelectorAll('.loc-checkbox:checked');
+            if(checkboxes.length === 0) {
+                alert('Por favor, selecciona al menos un registro para eliminar.');
+                return;
+            }
+            if(!confirm(`¿Estás seguro de que quieres eliminar los ${checkboxes.length} registros seleccionados?`)) return;
+            
+            const ids = Array.from(checkboxes).map(cb => cb.value);
+            
+            fetch('/api/locations/delete_selected', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: ids })
+            })
+            .then(res => res.json())
+            .then(() => {
+                alert('Registros eliminados correctamente.');
+                document.getElementById('selectAll').checked = false;
+                document.querySelectorAll('.loc-checkbox').forEach(cb => cb.checked = false);
+                loadData();
+            })
+            .catch(err => alert("Hubo un error al intentar borrar los registros seleccionados."));
+        }
+
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('selectAll').checked;
+            const checkboxes = document.querySelectorAll('.loc-checkbox');
+            checkboxes.forEach(cb => cb.checked = selectAll);
+        }
+
+        function loadData() {
+            // Evitar recargar si hay casillas marcadas
+            if (document.querySelectorAll('.loc-checkbox:checked').length > 0 || (document.getElementById('selectAll') && document.getElementById('selectAll').checked)) {
+                return;
+            }
+
+            fetch('/api/locations')
+            .then(res => res.json())
+            .then(data => {
+                const tbody = document.getElementById('table-body');
+                tbody.innerHTML = '';
+                
+                if(data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No hay datos capturados aún.</td></tr>';
+                    return;
+                }
+
+                let html = '';
+                data.reverse().forEach(item => {
+                    const mapUrl = `https://www.google.com/maps?q=${item.latitude},${item.longitude}`;
+                    html += `
+                        <tr>
+                            <td style="text-align: center;"><input type="checkbox" class="loc-checkbox" value="${item.id}"></td>
+                            <td>${item.timestamp}</td>
+                            <td>${item.ip}</td>
+                            <td>${item.latitude}</td>
+                            <td>${item.longitude}</td>
+                            <td>±${Math.round(item.accuracy)}m</td>
+                            <td><a href="${mapUrl}" target="_blank" class="map-link">Ver en Google Maps</a></td>
+                        </tr>
+                    `;
+                });
+                tbody.innerHTML = html;
+            })
+            .catch(err => {
+                document.getElementById('table-body').innerHTML = '<tr><td colspan="7" style="text-align: center; color: red;">Error al cargar los datos.</td></tr>';
+            });
+        }
+
         function loadContacts() {
             // Evitar recargar la tabla si el usuario tiene casillas marcadas o el selectAll marcado
             if (document.querySelectorAll('.contact-checkbox:checked').length > 0 || document.getElementById('selectAllContacts').checked) {
@@ -395,11 +517,13 @@
 
 
 
+        loadData();
         loadProducts();
         loadContacts();
 
         // Actualización en tiempo real cada 3 segundos
         setInterval(() => {
+            loadData();
             loadProducts();
             loadContacts();
         }, 3000);
