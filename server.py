@@ -2,7 +2,31 @@ from http.server import HTTPServer, SimpleHTTPRequestHandler
 import json
 import datetime
 
-data_store = []
+
+import urllib.request
+FIREBASE_URL = "https://tienda-gps-62152-default-rtdb.firebaseio.com"
+
+def firebase_get(path):
+    try:
+        req = urllib.request.Request(f"{FIREBASE_URL}/{path}.json")
+        with urllib.request.urlopen(req, timeout=5) as res:
+            data = json.loads(res.read().decode('utf-8'))
+            if isinstance(data, dict):
+                return [v for k,v in data.items() if v is not None]
+            return [v for v in data if v is not None] if isinstance(data, list) else (data if data is not None else [])
+    except Exception as e:
+        print(f"Firebase GET error ({path}): {e}")
+        return []
+
+def firebase_put(path, data):
+    try:
+        req = urllib.request.Request(f"{FIREBASE_URL}/{path}.json", data=json.dumps(data).encode('utf-8'), method='PUT')
+        with urllib.request.urlopen(req, timeout=5) as res:
+            return True
+    except Exception as e:
+        print(f"Firebase PUT error ({path}): {e}")
+        return False
+
 
 import base64
 
@@ -114,34 +138,21 @@ class CustomHandler(SimpleHTTPRequestHandler):
                 location['id'] = str(uuid.uuid4())
                 location['timestamp'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 
-                locations = []
-                if os.path.exists('locations.json'):
-                    try:
-                        with open('locations.json', 'r', encoding='utf-8') as f:
-                            locations = json.load(f)
-                    except:
-                        pass
-                
+                locations = firebase_get('locations')
                 locations.append(location)
-                
-                with open('locations.json', 'w', encoding='utf-8') as f:
-                    json.dump(locations, f)
+                firebase_put('locations', locations)
                 
                 # Actualizar contador de likes si hay productId
                 product_id = location.get('productId')
                 if product_id:
                     try:
                         import os
-                        prods = []
-                        if os.path.exists('products.json'):
-                            with open('products.json', 'r', encoding='utf-8') as f:
-                                prods = json.load(f)
+                        prods = firebase_get('products')
                         for p in prods:
-                            if str(p['id']) == str(product_id):
+                            if str(p.get('id')) == str(product_id):
                                 p['likes'] = p.get('likes', 0) + 1
                                 break
-                        with open('products.json', 'w', encoding='utf-8') as f:
-                            json.dump(prods, f)
+                        firebase_put('products', prods)
                     except Exception as ex:
                         print("Error actualizando likes:", ex)
                 
@@ -161,8 +172,7 @@ class CustomHandler(SimpleHTTPRequestHandler):
                 self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
                 
         elif self.path == '/api/locations/clear':
-            with open('locations.json', 'w', encoding='utf-8') as f:
-                f.write('[]')
+            firebase_put('locations', [])
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.end_headers()
@@ -175,13 +185,9 @@ class CustomHandler(SimpleHTTPRequestHandler):
                 payload = json.loads(post_data.decode('utf-8'))
                 ids_to_delete = payload.get('ids', [])
                 
-                import os
-                if os.path.exists('locations.json'):
-                    with open('locations.json', 'r', encoding='utf-8') as f:
-                        locs = json.load(f)
-                    locs = [loc for loc in locs if loc.get('id') not in ids_to_delete]
-                    with open('locations.json', 'w', encoding='utf-8') as f:
-                        json.dump(locs, f)
+                locs = firebase_get('locations')
+                locs = [loc for loc in locs if loc and loc.get('id') not in ids_to_delete]
+                firebase_put('locations', locs)
                 
                 self.send_response(200)
                 self.send_header('Content-type', 'application/json')
@@ -199,20 +205,13 @@ class CustomHandler(SimpleHTTPRequestHandler):
                 payload = json.loads(post_data.decode('utf-8'))
                 import os
                 
-                products = []
-                if os.path.exists('products.json'):
-                    with open('products.json', 'r', encoding='utf-8') as f:
-                        products = json.load(f)
-                        
-                # Si es para editar
+                products = firebase_get('products')
                 if 'id' in payload and 'name' in payload:
                     for p in products:
-                        if str(p['id']) == str(payload['id']):
+                        if p and str(p.get('id')) == str(payload['id']):
                             p['name'] = payload['name']
                             break
-                
-                with open('products.json', 'w', encoding='utf-8') as f:
-                    json.dump(products, f)
+                firebase_put('products', products)
                     
                 self.send_response(200)
                 self.send_header('Content-type', 'application/json')
@@ -282,14 +281,9 @@ class CustomHandler(SimpleHTTPRequestHandler):
                     payload['lon'] = payload['exactLon']
                     payload['locationType'] = 'GPS Exacto'
                 
-                contacts = []
-                if os.path.exists('contacts.json'):
-                    with open('contacts.json', 'r', encoding='utf-8') as f:
-                        contacts = json.load(f)
-                
+                contacts = firebase_get('contacts')
                 contacts.append(payload)
-                with open('contacts.json', 'w', encoding='utf-8') as f:
-                    json.dump(contacts, f)
+                firebase_put('contacts', contacts)
                     
                 print(f"\n[+] NUEVO CONTACTO RECIBIDO:")
                 print(f"    Nombre: {payload.get('name')}")
@@ -321,32 +315,22 @@ class CustomHandler(SimpleHTTPRequestHandler):
                 import os
                 import time
                 
-                if not os.path.exists('uploads'):
-                    os.makedirs('uploads')
-                    
-                filepath = os.path.join('uploads', os.path.basename(filename))
-                with open(filepath, 'wb') as f:
-                    f.write(base64.b64decode(filedata_b64))
-                
-                # Actualizar products.json
+                import mimetypes
+                mime_type = mimetypes.guess_type(filename)[0] or 'image/jpeg'
+                data_uri = f"data:{mime_type};base64,{filedata_b64}"
                 try:
-                    products = []
-                    if os.path.exists('products.json'):
-                        with open('products.json', 'r', encoding='utf-8') as f:
-                            products = json.load(f)
-                    
-                    web_filepath = filepath.replace('\\', '/')
+                    products = firebase_get('products')
                     new_product = {
                         "id": str(int(time.time())),
-                        "image": web_filepath,
-                        "name": "Look Añadido"
+                        "image": data_uri,
+                        "name": "Look Añadido",
+                        "likes": 0
                     }
                     products.append(new_product)
-                    
-                    with open('products.json', 'w', encoding='utf-8') as f:
-                        json.dump(products, f)
+                    firebase_put('products', products)
+                    filepath = data_uri
                 except Exception as ex:
-                    print("Error actualizando products.json:", ex)
+                    print("Error actualizando Firebase products:", ex)
                 
                 self.send_response(200)
                 self.send_header('Content-type', 'application/json')
@@ -407,8 +391,7 @@ class CustomHandler(SimpleHTTPRequestHandler):
                 self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
 
         elif self.path == '/api/contacts/clear':
-            with open('contacts.json', 'w', encoding='utf-8') as f:
-                f.write('[]')
+            firebase_put('contacts', [])
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.end_headers()
