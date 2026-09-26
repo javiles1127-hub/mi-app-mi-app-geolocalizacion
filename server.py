@@ -505,49 +505,19 @@ class CustomHandler(SimpleHTTPRequestHandler):
             self.send_header('Content-type', 'application/json')
             self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate')
             self.end_headers()
-            import os
-            if os.path.exists('products.json'):
-                with open('products.json', 'r', encoding='utf-8') as f:
-                    self.wfile.write(f.read().encode('utf-8'))
-            else:
-                self.wfile.write(b'[]')
+            self.wfile.write(json.dumps(firebase_get('products')).encode('utf-8'))
         elif self.path == '/api/locations':
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate')
             self.end_headers()
-            import os
-            locs = []
-            if os.path.exists('locations.json'):
-                try:
-                    with open('locations.json', 'r', encoding='utf-8') as f:
-                        locs = json.load(f)
-                except:
-                    pass
-            self.wfile.write(json.dumps(locs).encode('utf-8'))
+            self.wfile.write(json.dumps(firebase_get('locations')).encode('utf-8'))
         elif self.path == '/api/contacts':
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate')
             self.end_headers()
-            import os
-            if os.path.exists('contacts.json'):
-                with open('contacts.json', 'r', encoding='utf-8') as f:
-                    contacts = json.load(f)
-                    
-                # Ensure all contacts have an ID
-                modified = False
-                for i, c in enumerate(contacts):
-                    if 'id' not in c:
-                        c['id'] = f"contact_{i}_{c.get('timestamp', '').replace(' ', '').replace(':', '').replace('-', '')}"
-                        modified = True
-                if modified:
-                    with open('contacts.json', 'w', encoding='utf-8') as f:
-                        json.dump(contacts, f)
-                        
-                self.wfile.write(json.dumps(contacts).encode('utf-8'))
-            else:
-                self.wfile.write(b'[]')
+            self.wfile.write(json.dumps(firebase_get('contacts')).encode('utf-8'))
         else:
             super().do_GET()
 
