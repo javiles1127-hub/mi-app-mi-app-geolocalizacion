@@ -4,8 +4,81 @@ import datetime
 
 data_store = []
 
+import base64
+
+ADMIN_USERNAME = 'admin'
+ADMIN_PASSWORD = 'password123'
+active_sessions = set()
+
 class CustomHandler(SimpleHTTPRequestHandler):
+    def check_auth(self):
+        cookie = self.headers.get('Cookie')
+        if cookie:
+            for item in cookie.split(';'):
+                if item.strip().startswith('session_id='):
+                    session_id = item.strip().split('=')[1]
+                    if session_id in active_sessions:
+                        return True
+        return False
+
+    def request_auth(self, is_api=False):
+        if is_api:
+            self.send_response(401)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(b'{"error":"Unauthorized"}')
+        else:
+            self.send_response(302)
+            self.send_header('Location', '/login.html')
+            self.end_headers()
+
     def do_POST(self):
+        if self.path == '/api/login':
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            try:
+                payload = json.loads(post_data.decode('utf-8'))
+                if payload.get('username') == ADMIN_USERNAME and payload.get('password') == ADMIN_PASSWORD:
+                    import uuid
+                    new_session = str(uuid.uuid4())
+                    active_sessions.add(new_session)
+                    self.send_response(200)
+                    self.send_header('Set-Cookie', f'session_id={new_session}; Path=/')
+                    self.send_header('Content-type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(b'{"status":"success"}')
+                else:
+                    self.send_response(401)
+                    self.send_header('Content-type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(b'{"status":"error"}')
+            except:
+                self.send_response(400)
+                self.end_headers()
+            return
+            
+        if self.path == '/api/logout':
+            cookie = self.headers.get('Cookie')
+            if cookie:
+                for item in cookie.split(';'):
+                    if item.strip().startswith('session_id='):
+                        session_id = item.strip().split('=')[1]
+                        if session_id in active_sessions:
+                            active_sessions.remove(session_id)
+            self.send_response(200)
+            self.send_header('Set-Cookie', 'session_id=; Path=/; Max-Age=0')
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(b'{"status":"success"}')
+            return
+            
+        # Proteccion de rutas POST administrativas
+        protected_paths = ['/api/upload', '/api/contacts/clear', '/api/locations/clear', '/api/contacts/delete_selected', '/api/locations/delete_selected']
+        if self.path in protected_paths:
+            if not self.check_auth():
+                self.request_auth(is_api=True)
+                return
+        
         global data_store
         if self.path == '/api/location':
             content_length = int(self.headers['Content-Length'])
@@ -296,6 +369,10 @@ class CustomHandler(SimpleHTTPRequestHandler):
             self.end_headers()
 
     def do_DELETE(self):
+        if not self.check_auth():
+            self.request_auth(is_api=True)
+            return
+            
         if self.path.startswith('/api/products/'):
             product_id = self.path.split('/')[-1]
             try:
@@ -339,6 +416,17 @@ class CustomHandler(SimpleHTTPRequestHandler):
             self.end_headers()
 
     def do_GET(self):
+        if self.path == '/admin.html':
+            if not self.check_auth():
+                self.request_auth(is_api=False)
+                return
+                
+        protected_paths_get = ['/api/locations', '/api/contacts']
+        if self.path in protected_paths_get:
+            if not self.check_auth():
+                self.request_auth(is_api=True)
+                return
+
         if self.path == '/api/products':
             self.send_response(200)
             self.send_header('Content-type', 'application/json')

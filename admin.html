@@ -9,9 +9,13 @@
 </head>
 <body style="background: var(--bg-color);">
     <div class="admin-container">
-        <h1>📍 Registro de Ubicaciones Capturadas</h1>
-        <p>Aquí aparecerán las coordenadas de las personas que dieron "Me gusta" al catálogo.</p>
-        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <div>
+                <h1 style="margin-bottom: 5px;">📍 Registro de Ubicaciones Capturadas</h1>
+                <p style="margin-top: 0;">Aquí aparecerán las coordenadas de las personas que dieron "Me gusta" al catálogo.</p>
+            </div>
+            <button onclick="logout()" style="background: #ef4444; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: background 0.2s;">Cerrar Sesión 🔒</button>
+        </div>
         <div style="background: white; padding: 2rem; border-radius: 20px; margin-top: 1rem; box-shadow: var(--shadow-soft); border: 1px solid var(--border-color); text-align: center;">
             <h3 style="margin-top: 0; color: var(--text-main); font-weight: 700;">Subir Nuevo Producto</h3>
             <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem;">Sube una imagen para agregar un nuevo producto al catálogo.</p>
@@ -420,6 +424,16 @@
             loadProducts();
             loadContacts();
         }, 3000);
+        function logout() {
+            fetch('/api/logout', { method: 'POST' })
+            .then(() => {
+                window.location.href = '/login.html';
+            });
+        }
     </script>
+        <div style="text-align: center; margin-top: 2.5rem; margin-bottom: 1rem; font-size: 0.85rem; color: #64748b; letter-spacing: 0.5px;">
+            Desarrollado y administrado por <strong style="color: #94a3b8;">Ing.aviles</strong>
+        </div>
+    </div>
 </body>
 </html>
