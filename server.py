@@ -18,11 +18,22 @@ class CustomHandler(SimpleHTTPRequestHandler):
                     location['ip'] = forwarded_for.split(',')[0].strip()
                 else:
                     location['ip'] = self.client_address[0]
-                # Guardar en data_store
-                import uuid
+                import uuid, os
                 location['id'] = str(uuid.uuid4())
                 location['timestamp'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                data_store.append(location)
+                
+                locations = []
+                if os.path.exists('locations.json'):
+                    try:
+                        with open('locations.json', 'r', encoding='utf-8') as f:
+                            locations = json.load(f)
+                    except:
+                        pass
+                
+                locations.append(location)
+                
+                with open('locations.json', 'w', encoding='utf-8') as f:
+                    json.dump(locations, f)
                 
                 # Actualizar contador de likes si hay productId
                 product_id = location.get('productId')
@@ -58,7 +69,8 @@ class CustomHandler(SimpleHTTPRequestHandler):
                 self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
                 
         elif self.path == '/api/locations/clear':
-            data_store.clear()
+            with open('locations.json', 'w', encoding='utf-8') as f:
+                f.write('[]')
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.end_headers()
@@ -70,7 +82,14 @@ class CustomHandler(SimpleHTTPRequestHandler):
             try:
                 payload = json.loads(post_data.decode('utf-8'))
                 ids_to_delete = payload.get('ids', [])
-                data_store[:] = [loc for loc in data_store if loc.get('id') not in ids_to_delete]
+                
+                import os
+                if os.path.exists('locations.json'):
+                    with open('locations.json', 'r', encoding='utf-8') as f:
+                        locs = json.load(f)
+                    locs = [loc for loc in locs if loc.get('id') not in ids_to_delete]
+                    with open('locations.json', 'w', encoding='utf-8') as f:
+                        json.dump(locs, f)
                 
                 self.send_response(200)
                 self.send_header('Content-type', 'application/json')
@@ -332,16 +351,19 @@ class CustomHandler(SimpleHTTPRequestHandler):
             else:
                 self.wfile.write(b'[]')
         elif self.path == '/api/locations':
-            import uuid
-            global data_store
-            for loc in data_store:
-                if 'id' not in loc:
-                    loc['id'] = str(uuid.uuid4())
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate')
             self.end_headers()
-            self.wfile.write(json.dumps(data_store).encode('utf-8'))
+            import os
+            locs = []
+            if os.path.exists('locations.json'):
+                try:
+                    with open('locations.json', 'r', encoding='utf-8') as f:
+                        locs = json.load(f)
+                except:
+                    pass
+            self.wfile.write(json.dumps(locs).encode('utf-8'))
         elif self.path == '/api/contacts':
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
