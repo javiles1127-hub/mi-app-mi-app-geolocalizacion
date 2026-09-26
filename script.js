@@ -169,3 +169,36 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+// Online user tracking
+let siteUserId = sessionStorage.getItem('site_userId');
+if (!siteUserId) {
+    siteUserId = 'user_' + Math.random().toString(36).substr(2, 9);
+    sessionStorage.setItem('site_userId', siteUserId);
+}
+
+function pingServer() {
+    fetch('/api/ping', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: siteUserId })
+    }).catch(() => {});
+}
+
+function updateOnlineCount() {
+    fetch('/api/online_count')
+        .then(res => res.json())
+        .then(data => {
+            const elements = document.querySelectorAll('.online-count-display');
+            elements.forEach(el => {
+                el.innerText = data.count;
+            });
+        })
+        .catch(() => {});
+}
+
+// Start pings and updates
+pingServer();
+updateOnlineCount();
+setInterval(pingServer, 15000);
+setInterval(updateOnlineCount, 15000);

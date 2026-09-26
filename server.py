@@ -9,6 +9,7 @@ import base64
 ADMIN_USERNAME = 'admin'
 ADMIN_PASSWORD = 'password123'
 active_sessions = set()
+online_users = {}
 
 class CustomHandler(SimpleHTTPRequestHandler):
     def check_auth(self):
@@ -70,6 +71,24 @@ class CustomHandler(SimpleHTTPRequestHandler):
             self.send_header('Content-type', 'application/json')
             self.end_headers()
             self.wfile.write(b'{"status":"success"}')
+            return
+            
+        if self.path == '/api/ping':
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            try:
+                payload = json.loads(post_data.decode('utf-8'))
+                user_id = payload.get('userId')
+                if user_id:
+                    import time
+                    online_users[user_id] = time.time()
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(b'{"status":"ok"}')
+            except:
+                self.send_response(400)
+                self.end_headers()
             return
             
         # Proteccion de rutas POST administrativas
@@ -426,6 +445,20 @@ class CustomHandler(SimpleHTTPRequestHandler):
             if not self.check_auth():
                 self.request_auth(is_api=True)
                 return
+
+        if self.path == '/api/online_count':
+            import time
+            current_time = time.time()
+            expired_users = [uid for uid, t in online_users.items() if current_time - t > 30]
+            for uid in expired_users:
+                del online_users[uid]
+            
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate')
+            self.end_headers()
+            self.wfile.write(json.dumps({"count": len(online_users)}).encode('utf-8'))
+            return
 
         if self.path == '/api/products':
             self.send_response(200)
