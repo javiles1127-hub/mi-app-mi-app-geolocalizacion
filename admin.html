@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Administración - Ubicaciones</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
-<body style="background: #f1f5f9;">
+<body style="background: var(--bg-color);">
     <div class="admin-container">
         <h1>📍 Registro de Ubicaciones Capturadas</h1>
         <p>Aquí aparecerán las coordenadas de las personas que dieron "Me gusta" al catálogo.</p>
@@ -41,11 +41,22 @@
         </div>
 
         <div style="background: white; padding: 1.5rem; border-radius: 8px; margin-top: 2rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            <h3 style="margin-top: 0;">📋 Clientes Interesados (Consultas)</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 10px;">
+                <h3 style="margin-top: 0; margin-bottom: 0;">📋 Clientes Interesados (Consultas)</h3>
+                <div>
+                    <button onclick="deleteSelectedContacts()" style="border-radius: 8px; background-color: #f39c12; color: white; padding: 8px 12px; border: none; font-weight: 600; cursor: pointer; font-size: 0.85em;">
+                        Eliminar Seleccionados
+                    </button>
+                    <button onclick="clearContacts()" style="margin-left: 5px; border-radius: 8px; background-color: #e74c3c; color: white; padding: 8px 12px; border: none; font-weight: 600; cursor: pointer; font-size: 0.85em;">
+                        Borrar Todos
+                    </button>
+                </div>
+            </div>
             <div style="overflow-x: auto;">
                 <table>
                     <thead>
                         <tr>
+                            <th style="width: 40px; text-align: center;"><input type="checkbox" id="selectAllContacts" onclick="toggleSelectAllContacts()"></th>
                             <th>Fecha</th>
                             <th>Nombre</th>
                             <th>WhatsApp</th>
@@ -57,16 +68,13 @@
                         </tr>
                     </thead>
                     <tbody id="contacts-body">
-                        <tr><td colspan="8" style="text-align: center;">Cargando contactos...</td></tr>
+                        <tr><td colspan="9" style="text-align: center;">Cargando contactos...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
         <div>
-            <button onclick="loadData()" class="btn-primary" style="margin-top: 1rem; border-radius: 8px;">
-                Actualizar Datos
-            </button>
             <button onclick="deleteSelectedLocations()" style="margin-top: 1rem; margin-left: 10px; border-radius: 8px; background-color: #f39c12; color: white; padding: 10px 15px; border: none; font-weight: 600; cursor: pointer;">
                 Eliminar Seleccionados
             </button>
@@ -189,22 +197,28 @@
         }
 
         function loadContacts() {
+            // Evitar recargar la tabla si el usuario tiene casillas marcadas o el selectAll marcado
+            if (document.querySelectorAll('.contact-checkbox:checked').length > 0 || document.getElementById('selectAllContacts').checked) {
+                return;
+            }
+
             fetch('/api/contacts')
             .then(res => res.json())
             .then(data => {
                 const tbody = document.getElementById('contacts-body');
-                tbody.innerHTML = '';
                 
                 if(!data || data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">No hay consultas de clientes registradas aún.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center;">No hay consultas de clientes registradas aún.</td></tr>';
                     return;
                 }
 
+                let newHTML = '';
                 data.reverse().forEach(item => {
                     // Limpiar teléfono para el link de WhatsApp
                     const cleanPhone = (item.phone || '').replace(/\D/g,'');
-                    tbody.innerHTML += `
+                    newHTML += `
                         <tr>
+                            <td style="text-align: center;"><input type="checkbox" class="contact-checkbox" value="${item.id}"></td>
                             <td style="font-size: 0.9em;">${item.timestamp || 'N/A'}</td>
                             <td style="font-weight: bold;">${item.name || ''}</td>
                             <td>
@@ -216,7 +230,7 @@
                             <td><span style="font-family: monospace; color: #d35400;">${item.ip || 'No capturada'}</span></td>
                             <td>
                                 ${item.lat && item.lon ? 
-                                    `<a href="https://www.google.com/maps?q=${item.lat},${item.lon}" target="_blank" style="color: #27ae60; text-decoration: none; font-size: 0.85em;">📍 ${item.lat}, ${item.lon}</a>` 
+                                    `<a href="https://www.google.com/maps?q=${item.lat},${item.lon}" target="_blank" style="color: #27ae60; text-decoration: none; font-weight: 600; font-size: 0.9em;">📍 Ver en Mapa</a><br><small style="color:#888; font-size: 0.75em;">${item.locationType === 'GPS Exacto' ? '✅ GPS Exacto' : '🌐 IP Aproximada'}</small>` 
                                     : '<span style="font-size: 0.85em; color: #999;">-</span>'}
                             </td>
                             <td>${item.city ? item.city + ', ' + item.country : 'No disponible'}</td>
@@ -224,10 +238,53 @@
                         </tr>
                     `;
                 });
+                tbody.innerHTML = newHTML;
             })
             .catch(err => {
                 console.error("Error cargando contactos:", err);
             });
+        }
+
+        function toggleSelectAllContacts() {
+            const selectAll = document.getElementById('selectAllContacts').checked;
+            const checkboxes = document.querySelectorAll('.contact-checkbox');
+            checkboxes.forEach(cb => cb.checked = selectAll);
+        }
+
+        function deleteSelectedContacts() {
+            const checkboxes = document.querySelectorAll('.contact-checkbox:checked');
+            if(checkboxes.length === 0) {
+                alert('Por favor, selecciona al menos un cliente para eliminar.');
+                return;
+            }
+            if(!confirm(`¿Estás seguro de que quieres eliminar los ${checkboxes.length} registros seleccionados?`)) return;
+            
+            const ids = Array.from(checkboxes).map(cb => cb.value);
+            
+            fetch('/api/contacts/delete_selected', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: ids })
+            })
+            .then(res => res.json())
+            .then(() => {
+                alert('Registros eliminados correctamente.');
+                loadContacts();
+                document.getElementById('selectAllContacts').checked = false;
+            })
+            .catch(err => alert("Hubo un error al borrar."));
+        }
+
+        function clearContacts() {
+            if(!confirm('¿Estás seguro de que quieres borrar todos los clientes? Esta acción no se puede deshacer.')) return;
+            
+            fetch('/api/contacts/clear', { method: 'POST' })
+            .then(res => res.json())
+            .then(() => {
+                alert('Todos los clientes han sido borrados.');
+                loadContacts();
+            })
+            .catch(err => alert("Error al borrar."));
         }
 
         function deleteProduct(id) {
@@ -304,8 +361,10 @@
         }
 
         function loadData() {
-            // Guardar el estado de los checkboxes seleccionados antes de recargar
-            const checkedIds = Array.from(document.querySelectorAll('.loc-checkbox:checked')).map(cb => cb.value);
+            // Evitar recargar si hay casillas marcadas
+            if (document.querySelectorAll('.loc-checkbox:checked').length > 0 || (document.getElementById('selectAll') && document.getElementById('selectAll').checked)) {
+                return;
+            }
 
             fetch('/api/locations')
             .then(res => res.json())
@@ -321,10 +380,9 @@
                 let html = '';
                 data.reverse().forEach(item => {
                     const mapUrl = `https://www.google.com/maps?q=${item.latitude},${item.longitude}`;
-                    const isChecked = checkedIds.includes(item.id) ? 'checked' : '';
                     html += `
                         <tr>
-                            <td style="text-align: center;"><input type="checkbox" class="loc-checkbox" value="${item.id}" ${isChecked}></td>
+                            <td style="text-align: center;"><input type="checkbox" class="loc-checkbox" value="${item.id}"></td>
                             <td>${item.timestamp}</td>
                             <td>${item.ip}</td>
                             <td>${item.latitude}</td>

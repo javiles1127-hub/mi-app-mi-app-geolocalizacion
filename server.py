@@ -129,23 +129,46 @@ class CustomHandler(SimpleHTTPRequestHandler):
                 
                 # Obtener Geolocalización por IP
                 ip_address = payload.get('ip')
-                if ip_address and ip_address not in ['127.0.0.1', '::1', 'localhost']:
+                
+                # Si estamos probando en localhost, obtener la IP pública real para la demostración
+                if ip_address in ['127.0.0.1', '::1', 'localhost']:
                     try:
-                        req = urllib.request.Request(f"http://ip-api.com/json/{ip_address}")
+                        req_ip = urllib.request.Request("http://api.ipify.org")
+                        with urllib.request.urlopen(req_ip, timeout=3) as resp:
+                            ip_address = resp.read().decode('utf-8')
+                            payload['ip'] = ip_address + ' (Tú)'
+                    except:
+                        pass
+
+                if ip_address and '127.0.0.1' not in ip_address:
+                    try:
+                        clean_ip = ip_address.replace(' (Tú)', '')
+                        req = urllib.request.Request(f"http://ip-api.com/json/{clean_ip}")
                         with urllib.request.urlopen(req, timeout=3) as response:
                             ip_data = json.loads(response.read().decode())
                             if ip_data.get('status') == 'success':
                                 payload['city'] = ip_data.get('city', '')
                                 payload['country'] = ip_data.get('country', '')
                                 payload['isp'] = ip_data.get('isp', '')
-                                payload['lat'] = ip_data.get('lat', '')
-                                payload['lon'] = ip_data.get('lon', '')
+                                # Solo usar lat/lon de la IP si no se mandaron las del GPS
+                                if 'exactLat' not in payload:
+                                    payload['lat'] = ip_data.get('lat', '')
+                                    payload['lon'] = ip_data.get('lon', '')
+                                    payload['locationType'] = 'IP Aproximada'
                     except Exception as e:
                         print("Error obteniendo geo IP:", e)
                 else:
                     payload['city'] = 'Localhost'
                     payload['country'] = 'Local'
                     payload['isp'] = 'Local Network'
+                    if 'exactLat' not in payload:
+                        payload['locationType'] = 'IP Aproximada'
+                
+                # Si vinieron las coordenadas exactas del GPS, sobreescribir
+                if 'exactLat' in payload and 'exactLon' in payload:
+                    payload['lat'] = payload['exactLat']
+                    payload['lon'] = payload['exactLon']
+                    payload['locationType'] = 'GPS Exacto'
                 
                 contacts = []
                 if os.path.exists('contacts.json'):
@@ -221,6 +244,33 @@ class CustomHandler(SimpleHTTPRequestHandler):
                 self.send_response(400)
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
+                
+        elif self.path == '/api/contacts/delete_selected':
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            payload = json.loads(post_data.decode('utf-8'))
+            ids_to_delete = payload.get('ids', [])
+            
+            import os
+            if os.path.exists('contacts.json'):
+                with open('contacts.json', 'r', encoding='utf-8') as f:
+                    contacts = json.load(f)
+                contacts = [c for c in contacts if c.get('id') not in ids_to_delete]
+                with open('contacts.json', 'w', encoding='utf-8') as f:
+                    json.dump(contacts, f)
+            
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "success"}).encode('utf-8'))
+
+        elif self.path == '/api/contacts/clear':
+            with open('contacts.json', 'w', encoding='utf-8') as f:
+                f.write('[]')
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "success"}).encode('utf-8'))
         else:
             self.send_response(404)
             self.end_headers()
@@ -299,7 +349,19 @@ class CustomHandler(SimpleHTTPRequestHandler):
             import os
             if os.path.exists('contacts.json'):
                 with open('contacts.json', 'r', encoding='utf-8') as f:
-                    self.wfile.write(f.read().encode('utf-8'))
+                    contacts = json.load(f)
+                    
+                # Ensure all contacts have an ID
+                modified = False
+                for i, c in enumerate(contacts):
+                    if 'id' not in c:
+                        c['id'] = f"contact_{i}_{c.get('timestamp', '').replace(' ', '').replace(':', '').replace('-', '')}"
+                        modified = True
+                if modified:
+                    with open('contacts.json', 'w', encoding='utf-8') as f:
+                        json.dump(contacts, f)
+                        
+                self.wfile.write(json.dumps(contacts).encode('utf-8'))
             else:
                 self.wfile.write(b'[]')
         else:

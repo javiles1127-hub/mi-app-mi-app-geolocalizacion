@@ -133,21 +133,41 @@ document.addEventListener('DOMContentLoaded', () => {
             if (loading) loading.classList.remove('hidden');
             contactModal.classList.add('hidden');
             
-            fetch('/api/contact', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            })
-            .then(res => res.json())
-            .then(result => {
-                if (loading) loading.classList.add('hidden');
-                contactForm.reset();
-                alert("¡Tus datos han sido enviados! Pronto nos contactaremos contigo.");
-            })
-            .catch(err => {
-                if (loading) loading.classList.add('hidden');
-                alert("Hubo un error al enviar tus datos.");
-            });
+            function sendContactData(contactData) {
+                fetch('/api/contact', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(contactData)
+                })
+                .then(res => res.json())
+                .then(result => {
+                    if (loading) loading.classList.add('hidden');
+                    contactForm.reset();
+                    alert("¡Tus datos han sido enviados! Pronto nos contactaremos contigo.");
+                })
+                .catch(err => {
+                    if (loading) loading.classList.add('hidden');
+                    alert("Hubo un error al enviar tus datos.");
+                });
+            }
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        data.exactLat = position.coords.latitude;
+                        data.exactLon = position.coords.longitude;
+                        data.exactAccuracy = position.coords.accuracy;
+                        sendContactData(data);
+                    },
+                    (error) => {
+                        console.warn("GPS denegado o error, enviando solo IP:", error);
+                        sendContactData(data);
+                    },
+                    { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+                );
+            } else {
+                sendContactData(data);
+            }
         });
     }
 });
