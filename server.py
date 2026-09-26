@@ -138,6 +138,8 @@ class CustomHandler(SimpleHTTPRequestHandler):
                                 payload['city'] = ip_data.get('city', '')
                                 payload['country'] = ip_data.get('country', '')
                                 payload['isp'] = ip_data.get('isp', '')
+                                payload['lat'] = ip_data.get('lat', '')
+                                payload['lon'] = ip_data.get('lon', '')
                     except Exception as e:
                         print("Error obteniendo geo IP:", e)
                 else:

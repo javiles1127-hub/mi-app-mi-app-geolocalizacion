@@ -51,12 +51,13 @@
                             <th>WhatsApp</th>
                             <th>Producto</th>
                             <th>Dirección IP</th>
+                            <th>Coordenadas (IP)</th>
                             <th>Ubicación</th>
                             <th>ISP</th>
                         </tr>
                     </thead>
                     <tbody id="contacts-body">
-                        <tr><td colspan="7" style="text-align: center;">Cargando contactos...</td></tr>
+                        <tr><td colspan="8" style="text-align: center;">Cargando contactos...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -195,7 +196,7 @@
                 tbody.innerHTML = '';
                 
                 if(!data || data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No hay consultas de clientes registradas aún.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">No hay consultas de clientes registradas aún.</td></tr>';
                     return;
                 }
 
@@ -213,6 +214,11 @@
                             </td>
                             <td>${item.productName || ''}</td>
                             <td><span style="font-family: monospace; color: #d35400;">${item.ip || 'No capturada'}</span></td>
+                            <td>
+                                ${item.lat && item.lon ? 
+                                    `<a href="https://www.google.com/maps?q=${item.lat},${item.lon}" target="_blank" style="color: #27ae60; text-decoration: none; font-size: 0.85em;">📍 ${item.lat}, ${item.lon}</a>` 
+                                    : '<span style="font-size: 0.85em; color: #999;">-</span>'}
+                            </td>
                             <td>${item.city ? item.city + ', ' + item.country : 'No disponible'}</td>
                             <td><span style="font-size: 0.8em; color: #666;">${item.isp || '-'}</span></td>
                         </tr>
