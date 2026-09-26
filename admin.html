@@ -168,40 +168,58 @@
         }
 
         function loadProducts() {
-            // Check if any product input is focused, skip update to prevent losing focus/text
-            const activeEl = document.activeElement;
-            if (activeEl && activeEl.tagName === 'INPUT' && activeEl.id.startsWith('prod-name-')) {
-                return;
-            }
-
             fetch('/api/products')
             .then(res => res.json())
             .then(data => {
                 const tbody = document.getElementById('products-body');
-                tbody.innerHTML = '';
                 
-                if(data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No hay productos en el catálogo.</td></tr>';
-                    return;
-                }
+                // Si la cantidad de productos cambió o la tabla está vacía, reconstruimos
+                if (tbody.children.length !== data.length || (tbody.innerHTML.includes('Cargando') && data.length > 0) || (tbody.innerHTML.includes('No hay') && data.length > 0)) {
+                    tbody.innerHTML = '';
+                    
+                    if(data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No hay productos en el catálogo.</td></tr>';
+                        return;
+                    }
 
-                data.forEach(item => {
-                    tbody.innerHTML += `
-                        <tr>
-                            <td><img src="${item.image}" width="60" style="border-radius: 4px; max-height: 60px; object-fit: cover;"></td>
-                            <td>
-                                <input type="text" id="prod-name-${item.id}" value="${item.name}" style="padding: 5px; border-radius: 4px; border: 1px solid #ccc; width: 100%;">
-                            </td>
-                            <td style="text-align: center; font-weight: bold; font-size: 1.2rem; color: #e11d48;">
-                                ${item.likes || 0}
-                            </td>
-                            <td style="white-space: nowrap;">
-                                <button onclick="editProduct('${item.id}')" style="padding: 5px 10px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 5px;">Guardar</button>
-                                <button onclick="deleteProduct('${item.id}')" style="padding: 5px 10px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;">Eliminar</button>
-                            </td>
-                        </tr>
-                    `;
-                });
+                    data.forEach(item => {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td><img src="${item.image}" width="60" style="border-radius: 4px; max-height: 60px; object-fit: cover;"></td>
+                                <td>
+                                    <input type="text" id="prod-name-${item.id}" value="${item.name}" style="padding: 5px; border-radius: 4px; border: 1px solid #ccc; width: 100%;">
+                                </td>
+                                <td class="likes-cell" style="text-align: center; font-weight: bold; font-size: 1.2rem; color: #e11d48;">
+                                    ${item.likes || 0}
+                                </td>
+                                <td style="white-space: nowrap;">
+                                    <button onclick="editProduct('${item.id}')" style="padding: 5px 10px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 5px;">Guardar</button>
+                                    <button onclick="deleteProduct('${item.id}')" style="padding: 5px 10px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;">Eliminar</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    // Solo actualizar datos de las filas existentes
+                    const activeElId = document.activeElement ? document.activeElement.id : null;
+                    
+                    data.forEach((item, index) => {
+                        const row = tbody.children[index];
+                        if (!row) return;
+                        
+                        // Actualizar likes
+                        const likesTd = row.querySelector('.likes-cell');
+                        if (likesTd) {
+                            likesTd.innerText = item.likes || 0;
+                        }
+                        
+                        // Actualizar nombre (solo si el usuario no está escribiendo en él)
+                        const nameInput = row.querySelector(`input[id="prod-name-${item.id}"]`);
+                        if (nameInput && activeElId !== `prod-name-${item.id}`) {
+                            nameInput.value = item.name;
+                        }
+                    });
+                }
             });
         }
 
