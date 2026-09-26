@@ -210,8 +210,12 @@
 
         function loadProducts() {
             fetch('/api/products')
-            .then(res => res.json())
+            .then(res => {
+                if (res.status === 401) window.location.href = '/login.html';
+                return res.json();
+            })
             .then(data => {
+                if (data.error === "Unauthorized") { window.location.href = '/login.html'; return; }
                 const tbody = document.getElementById('products-body');
                 
                 // Si la cantidad de productos cambió o la tabla está vacía, reconstruimos
@@ -379,8 +383,12 @@
             }
 
             fetch('/api/locations')
-            .then(res => res.json())
+            .then(res => {
+                if (res.status === 401) window.location.href = '/login.html';
+                return res.json();
+            })
             .then(data => {
+                if (data.error === "Unauthorized") { window.location.href = '/login.html'; return; }
                 const tbody = document.getElementById('table-body');
                 
                 if(data.length === 0) {
@@ -453,8 +461,12 @@
             }
 
             fetch('/api/contacts')
-            .then(res => res.json())
+            .then(res => {
+                if (res.status === 401) window.location.href = '/login.html';
+                return res.json();
+            })
             .then(data => {
+                if (data.error === "Unauthorized") { window.location.href = '/login.html'; return; }
                 const tbody = document.getElementById('contacts-body');
                 
                 if(!data || data.length === 0) {
